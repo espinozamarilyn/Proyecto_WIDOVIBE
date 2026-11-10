@@ -1,0 +1,210 @@
+---
+import AuthLayout from '../../layouts/AuthLayout.astro';
+---
+
+<AuthLayout title="Crear cuenta | ChatMod">
+  <div class="mb-7 text-center">
+    <h1 class="text-2xl font-bold text-slate-900">
+      Crear una cuenta
+    </h1>
+    <p class="mt-2 text-sm text-slate-500">
+      Únete a ChatMod y comienza a conversar.
+    </p>
+  </div>
+
+  <form id="registro-form" class="space-y-4">
+    <div>
+      <label for="nombre_completo" class="mb-2 block text-sm font-medium text-slate-700">
+        Nombre completo
+      </label>
+
+      <input
+        id="nombre_completo"
+        name="nombre_completo"
+        type="text"
+        placeholder="Tu nombre completo"
+        autocomplete="name"
+        minlength="3"
+        maxlength="120"
+        required
+        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      />
+    </div>
+
+    <div>
+      <label for="nombre_usuario" class="mb-2 block text-sm font-medium text-slate-700">
+        Nombre de usuario
+      </label>
+
+      <input
+        id="nombre_usuario"
+        name="nombre_usuario"
+        type="text"
+        placeholder="usuario123"
+        autocomplete="username"
+        minlength="3"
+        maxlength="40"
+        pattern="[a-zA-Z0-9_.]+"
+        title="Solo se admiten letras, números, puntos y guiones bajos."
+        required
+        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      />
+
+      <p class="mt-1 text-xs text-slate-400">
+        Solo letras, números, puntos y guiones bajos.
+      </p>
+    </div>
+
+    <div>
+      <label for="correo" class="mb-2 block text-sm font-medium text-slate-700">
+        Correo electrónico
+      </label>
+
+      <input
+        id="correo"
+        name="correo"
+        type="email"
+        placeholder="ejemplo@correo.com"
+        autocomplete="email"
+        maxlength="150"
+        required
+        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      />
+    </div>
+
+    <div>
+      <label for="password" class="mb-2 block text-sm font-medium text-slate-700">
+        Contraseña
+      </label>
+
+      <input
+        id="password"
+        name="password"
+        type="password"
+        placeholder="Mínimo 8 caracteres"
+        autocomplete="new-password"
+        minlength="8"
+        maxlength="72"
+        required
+        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      />
+    </div>
+
+    <div>
+      <label for="confirmar_password" class="mb-2 block text-sm font-medium text-slate-700">
+        Confirmar contraseña
+      </label>
+
+      <input
+        id="confirmar_password"
+        name="confirmar_password"
+        type="password"
+        placeholder="Repite tu contraseña"
+        autocomplete="new-password"
+        minlength="8"
+        maxlength="72"
+        required
+        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      />
+    </div>
+
+    <div
+      id="registro-error"
+      class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
+      role="alert"
+    ></div>
+
+    <button
+      id="registro-button"
+      type="submit"
+      class="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      Crear cuenta
+    </button>
+  </form>
+
+  <div class="my-6 flex items-center gap-3">
+    <div class="h-px flex-1 bg-slate-200"></div>
+    <span class="text-xs text-slate-400">O</span>
+    <div class="h-px flex-1 bg-slate-200"></div>
+  </div>
+
+  <p class="text-center text-sm text-slate-600">
+    ¿Ya tienes una cuenta?
+    <a
+      id="login-link"
+      href="/login/"
+      class="font-semibold text-indigo-600 hover:text-indigo-800"
+    >
+      Inicia sesión
+    </a>
+  </p>
+</AuthLayout>
+
+<script>
+  import { authService } from '../../services/api/auth.service';
+  import { ApiError } from '../../services/api/api.service';
+
+  const form = document.getElementById('registro-form') as HTMLFormElement;
+
+  const nombreCompletoInput = document.getElementById('nombre_completo') as HTMLInputElement;
+  const nombreUsuarioInput = document.getElementById('nombre_usuario') as HTMLInputElement;
+  const correoInput = document.getElementById('correo') as HTMLInputElement;
+  const passwordInput = document.getElementById('password') as HTMLInputElement;
+  const confirmarPasswordInput = document.getElementById('confirmar_password') as HTMLInputElement;
+
+  const errorElement = document.getElementById('registro-error') as HTMLDivElement;
+  const button = document.getElementById('registro-button') as HTMLButtonElement;
+  const loginLink = document.getElementById('login-link') as HTMLAnchorElement;
+
+  const returnUrl = new URLSearchParams(window.location.search).get('returnUrl');
+
+  function obtenerDestino(): string {
+    if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+      return returnUrl;
+    }
+
+    return '/app/mensajes/';
+  }
+
+  if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+    loginLink.href = `/login/?returnUrl=${encodeURIComponent(returnUrl)}`;
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    errorElement.textContent = '';
+    errorElement.classList.add('hidden');
+
+    if (passwordInput.value !== confirmarPasswordInput.value) {
+      errorElement.textContent = 'Las contraseñas no coinciden.';
+      errorElement.classList.remove('hidden');
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Creando cuenta...';
+
+    try {
+      await authService.registro({
+        nombre_completo: nombreCompletoInput.value.trim(),
+        nombre_usuario: nombreUsuarioInput.value.trim(),
+        correo: correoInput.value.trim(),
+        password: passwordInput.value,
+      });
+
+      window.location.href = obtenerDestino();
+    } catch (error) {
+      errorElement.textContent =
+        error instanceof ApiError
+          ? error.message
+          : 'No se pudo conectar con el servidor. Inténtalo nuevamente.';
+
+      errorElement.classList.remove('hidden');
+
+      button.disabled = false;
+      button.textContent = 'Crear cuenta';
+    }
+  });
+</script>

@@ -1,0 +1,138 @@
+---
+import AuthLayout from '../../layouts/AuthLayout.astro';
+---
+
+<AuthLayout title="Iniciar sesión | ChatMod">
+  <div class="mb-7 text-center">
+    <h1 class="text-2xl font-bold text-slate-900">
+      ¡Bienvenido de nuevo!
+    </h1>
+    <p class="mt-2 text-sm text-slate-500">
+      Inicia sesión para continuar en ChatMod.
+    </p>
+  </div>
+
+  <form id="login-form" class="space-y-5">
+    <div>
+      <label for="correo" class="mb-2 block text-sm font-medium text-slate-700">
+        Correo electrónico
+      </label>
+
+      <input
+        id="correo"
+        name="correo"
+        type="email"
+        placeholder="ejemplo@correo.com"
+        autocomplete="email"
+        required
+        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      />
+    </div>
+
+    <div>
+      <label for="password" class="mb-2 block text-sm font-medium text-slate-700">
+        Contraseña
+      </label>
+
+      <input
+        id="password"
+        name="password"
+        type="password"
+        placeholder="Ingresa tu contraseña"
+        autocomplete="current-password"
+        minlength="8"
+        required
+        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      />
+    </div>
+
+    <div
+      id="login-error"
+      class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
+      role="alert"
+    ></div>
+
+    <button
+      id="login-button"
+      type="submit"
+      class="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      Iniciar sesión
+    </button>
+  </form>
+
+  <div class="my-6 flex items-center gap-3">
+    <div class="h-px flex-1 bg-slate-200"></div>
+    <span class="text-xs text-slate-400">O</span>
+    <div class="h-px flex-1 bg-slate-200"></div>
+  </div>
+
+  <p class="text-center text-sm text-slate-600">
+    ¿Todavía no tienes una cuenta?
+    <a
+      id="registro-link"
+      href="/registro/"
+      class="font-semibold text-indigo-600 hover:text-indigo-800"
+    >
+      Regístrate
+    </a>
+  </p>
+</AuthLayout>
+
+<script>
+  import { authService } from '../../services/api/auth.service';
+  import { ApiError } from '../../services/api/api.service';
+
+  const form = document.getElementById('login-form') as HTMLFormElement;
+  const correoInput = document.getElementById('correo') as HTMLInputElement;
+  const passwordInput = document.getElementById('password') as HTMLInputElement;
+  const errorElement = document.getElementById('login-error') as HTMLDivElement;
+  const button = document.getElementById('login-button') as HTMLButtonElement;
+  const registroLink = document.getElementById('registro-link') as HTMLAnchorElement;
+
+  function obtenerDestino(): string {
+    const params = new URLSearchParams(window.location.search);
+    const returnUrl = params.get('returnUrl');
+
+    if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+      return returnUrl;
+    }
+
+    return '/app/mensajes/';
+  }
+
+  const returnUrl = new URLSearchParams(window.location.search).get('returnUrl');
+
+  if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+    registroLink.href = `/registro/?returnUrl=${encodeURIComponent(returnUrl)}`;
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    errorElement.textContent = '';
+    errorElement.classList.add('hidden');
+
+    button.disabled = true;
+    button.textContent = 'Iniciando sesión...';
+
+    try {
+      await authService.login({
+        correo: correoInput.value.trim(),
+        password: passwordInput.value,
+      });
+
+      window.location.href = obtenerDestino();
+    } catch (error) {
+      errorElement.textContent =
+        error instanceof ApiError
+          ? error.message
+          : 'No se pudo conectar con el servidor. Inténtalo nuevamente.';
+
+      errorElement.classList.remove('hidden');
+
+      button.disabled = false;
+      button.textContent = 'Iniciar sesión';
+    }
+  });
+</script>

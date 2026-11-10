@@ -1,0 +1,16 @@
+﻿services:
+  astro:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: astro-frontend
+    ports:
+      - "4321:4321"
+    volumes:
+      - .:/app
+      - astro_node_modules:/app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+    restart: unless-stopped
+
+volumes:
+  astro_node_modules:

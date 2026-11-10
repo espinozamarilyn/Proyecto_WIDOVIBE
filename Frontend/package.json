@@ -1,0 +1,26 @@
+{
+  "name": "frontend",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^6.4.8",
+    "socket.io-client": "^4.8.4"
+  },
+  "devDependencies": {
+    "@rollup/wasm-node": "^4.68.0",
+    "@tailwindcss/vite": "^4.2.1",
+    "tailwindcss": "^4.2.1"
+  },
+  "overrides": {
+    "vite": "^7.3.7"
+  }
+}

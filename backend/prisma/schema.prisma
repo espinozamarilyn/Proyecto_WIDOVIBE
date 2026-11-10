@@ -1,0 +1,385 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model archivos_adjuntos {
+  id                BigInt                              @id @default(autoincrement()) @db.UnsignedBigInt
+  mensaje_id        BigInt                              @db.UnsignedBigInt
+  nombre_original   String                              @db.VarChar(255)
+  nombre_almacenado String                              @db.VarChar(255)
+  ruta_archivo      String                              @db.VarChar(500)
+  tipo_mime         String                              @db.VarChar(120)
+  tamano_bytes      BigInt                              @db.UnsignedBigInt
+  estado_validacion archivos_adjuntos_estado_validacion @default(pendiente)
+  creado_en         DateTime?                           @default(now()) @db.Timestamp(0)
+  mensajes          mensajes                            @relation(fields: [mensaje_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "archivos_adjuntos_ibfk_1")
+
+  @@index([mensaje_id], map: "mensaje_id")
+}
+
+model bloqueos {
+  usuario_id                               BigInt    @db.UnsignedBigInt
+  bloqueado_id                             BigInt    @db.UnsignedBigInt
+  creado_en                                DateTime? @default(now()) @db.Timestamp(0)
+  usuarios_bloqueos_usuario_idTousuarios   usuarios  @relation("bloqueos_usuario_idTousuarios", fields: [usuario_id], references: [id], onUpdate: Restrict, map: "bloqueos_ibfk_1")
+  usuarios_bloqueos_bloqueado_idTousuarios usuarios  @relation("bloqueos_bloqueado_idTousuarios", fields: [bloqueado_id], references: [id], onUpdate: Restrict, map: "bloqueos_ibfk_2")
+
+  @@id([usuario_id, bloqueado_id])
+  @@index([bloqueado_id], map: "bloqueado_id")
+}
+
+model canales_comunidad {
+  id             BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  comunidad_id   BigInt                 @db.UnsignedBigInt
+  nombre         String                 @db.VarChar(100)
+  descripcion    String?                @db.VarChar(255)
+  tipo           canales_comunidad_tipo @default(texto)
+  orden          Int                    @default(0)
+  creado_por     BigInt                 @db.UnsignedBigInt
+  creado_en      DateTime?              @default(now()) @db.Timestamp(0)
+  comunidades    comunidades            @relation(fields: [comunidad_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "canales_comunidad_ibfk_1")
+  usuarios       usuarios               @relation(fields: [creado_por], references: [id], onUpdate: Restrict, map: "canales_comunidad_ibfk_2")
+  mensajes       mensajes[]
+  permisos_canal permisos_canal[]
+
+  @@index([creado_por], map: "creado_por")
+  @@index([comunidad_id, orden], map: "idx_canales_comunidad")
+}
+
+model comunidades {
+  id                    BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  nombre                String                  @db.VarChar(120)
+  descripcion           String?                 @db.Text
+  imagen                String?                 @db.VarChar(500)
+  categoria             String?                 @db.VarChar(80)
+  privacidad            comunidades_privacidad  @default(publica)
+  creador_id            BigInt                  @db.UnsignedBigInt
+  creado_en             DateTime?               @default(now()) @db.Timestamp(0)
+  actualizado_en        DateTime?               @default(now()) @db.Timestamp(0)
+  canales_comunidad     canales_comunidad[]
+  usuarios              usuarios                @relation(fields: [creador_id], references: [id], onUpdate: Restrict, map: "comunidades_ibfk_1")
+  miembros_comunidad    miembros_comunidad[]
+  solicitudes_comunidad solicitudes_comunidad[]
+
+  @@index([creador_id], map: "creador_id")
+  @@index([nombre], map: "idx_comunidad_nombre")
+}
+
+model configuracion_usuario {
+  usuario_id               BigInt                                      @id @db.UnsignedBigInt
+  privacidad_perfil        configuracion_usuario_privacidad_perfil     @default(publico)
+  quien_puede_contactar    configuracion_usuario_quien_puede_contactar @default(todos)
+  mostrar_estado_conexion  Boolean                                     @default(true)
+  notificaciones_activadas Boolean                                     @default(true)
+  usuarios                 usuarios                                    @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "configuracion_usuario_ibfk_1")
+}
+
+model conversaciones {
+  id                         BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  tipo                       conversaciones_tipo
+  nombre                     String?                      @db.VarChar(120)
+  descripcion                String?                      @db.VarChar(255)
+  foto                       String?                      @db.VarChar(500)
+  creado_por                 BigInt                       @db.UnsignedBigInt
+  creado_en                  DateTime?                    @default(now()) @db.Timestamp(0)
+  actualizado_en             DateTime?                    @default(now()) @db.Timestamp(0)
+  usuarios                   usuarios                     @relation(fields: [creado_por], references: [id], onUpdate: Restrict, map: "conversaciones_ibfk_1")
+  mensajes                   mensajes[]
+  participantes_conversacion participantes_conversacion[]
+
+  @@index([creado_por], map: "creado_por")
+}
+
+model mensaje_destinatarios {
+  mensaje_id      BigInt    @db.UnsignedBigInt
+  destinatario_id BigInt    @db.UnsignedBigInt
+  entregado_en    DateTime? @db.DateTime(0)
+  leido_en        DateTime? @db.DateTime(0)
+  mensajes        mensajes  @relation(fields: [mensaje_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "mensaje_destinatarios_ibfk_1")
+  usuarios        usuarios  @relation(fields: [destinatario_id], references: [id], onUpdate: Restrict, map: "mensaje_destinatarios_ibfk_2")
+
+  @@id([mensaje_id, destinatario_id])
+  @@index([destinatario_id], map: "destinatario_id")
+}
+
+model mensajes {
+  id                    BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  conversacion_id       BigInt?                 @db.UnsignedBigInt
+  canal_id              BigInt?                 @db.UnsignedBigInt
+  remitente_id          BigInt                  @db.UnsignedBigInt
+  contenido             String?                 @db.Text
+  tipo                  mensajes_tipo           @default(texto)
+  clave_idempotencia    String?                 @db.VarChar(100)
+  creado_en             DateTime?               @default(now()) @db.Timestamp(0)
+  editado_en            DateTime?               @db.DateTime(0)
+  eliminado_en          DateTime?               @db.DateTime(0)
+  archivos_adjuntos     archivos_adjuntos[]
+  mensaje_destinatarios mensaje_destinatarios[]
+  conversaciones        conversaciones?         @relation(fields: [conversacion_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "mensajes_ibfk_1")
+  canales_comunidad     canales_comunidad?      @relation(fields: [canal_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "mensajes_ibfk_2")
+  usuarios              usuarios                @relation(fields: [remitente_id], references: [id], onUpdate: Restrict, map: "mensajes_ibfk_3")
+  reportes              reportes[]
+
+  @@unique([remitente_id, clave_idempotencia], map: "remitente_id")
+  @@index([canal_id, creado_en], map: "idx_mensajes_canal")
+  @@index([conversacion_id, creado_en], map: "idx_mensajes_conversacion")
+}
+
+model miembros_comunidad {
+  comunidad_id BigInt                 @db.UnsignedBigInt
+  usuario_id   BigInt                 @db.UnsignedBigInt
+  rol          miembros_comunidad_rol @default(miembro)
+  unido_en     DateTime?              @default(now()) @db.Timestamp(0)
+  comunidades  comunidades            @relation(fields: [comunidad_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "miembros_comunidad_ibfk_1")
+  usuarios     usuarios               @relation(fields: [usuario_id], references: [id], onUpdate: Restrict, map: "miembros_comunidad_ibfk_2")
+
+  @@id([comunidad_id, usuario_id])
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model notificaciones {
+  id            BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  usuario_id    BigInt              @db.UnsignedBigInt
+  tipo          notificaciones_tipo
+  titulo        String              @db.VarChar(150)
+  contenido     String?             @db.VarChar(500)
+  referencia_id BigInt?             @db.UnsignedBigInt
+  leida         Boolean             @default(false)
+  creado_en     DateTime?           @default(now()) @db.Timestamp(0)
+  usuarios      usuarios            @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "notificaciones_ibfk_1")
+
+  @@index([usuario_id, leida, creado_en], map: "idx_notificaciones_usuario")
+}
+
+model participantes_conversacion {
+  conversacion_id         BigInt                         @db.UnsignedBigInt
+  usuario_id              BigInt                         @db.UnsignedBigInt
+  rol                     participantes_conversacion_rol @default(miembro)
+  puede_enviar_mensajes   Boolean                        @default(true)
+  puede_adjuntar_archivos Boolean                        @default(true)
+  puede_invitar           Boolean                        @default(false)
+  unido_en                DateTime?                      @default(now()) @db.Timestamp(0)
+  retirado_en             DateTime?                      @db.DateTime(0)
+  silenciado              Boolean                        @default(false)
+  conversaciones          conversaciones                 @relation(fields: [conversacion_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "participantes_conversacion_ibfk_1")
+  usuarios                usuarios                       @relation(fields: [usuario_id], references: [id], onUpdate: Restrict, map: "participantes_conversacion_ibfk_2")
+
+  @@id([conversacion_id, usuario_id])
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model permisos_canal {
+  canal_id          BigInt             @db.UnsignedBigInt
+  rol               permisos_canal_rol
+  puede_ver         Boolean            @default(true)
+  puede_escribir    Boolean            @default(true)
+  puede_adjuntar    Boolean            @default(true)
+  puede_administrar Boolean            @default(false)
+  canales_comunidad canales_comunidad  @relation(fields: [canal_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "permisos_canal_ibfk_1")
+
+  @@id([canal_id, rol])
+}
+
+model reportes {
+  id                                               BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  reportante_id                                    BigInt          @db.UnsignedBigInt
+  usuario_reportado_id                             BigInt?         @db.UnsignedBigInt
+  mensaje_reportado_id                             BigInt?         @db.UnsignedBigInt
+  motivo                                           reportes_motivo
+  descripcion                                      String?         @db.Text
+  estado                                           reportes_estado @default(pendiente)
+  resolucion                                       String?         @db.Text
+  revisado_por                                     BigInt?         @db.UnsignedBigInt
+  creado_en                                        DateTime?       @default(now()) @db.Timestamp(0)
+  resuelto_en                                      DateTime?       @db.DateTime(0)
+  mensajes                                         mensajes?       @relation(fields: [mensaje_reportado_id], references: [id], onUpdate: Restrict, map: "fk_reportes_mensaje")
+  usuarios_reportes_reportante_idTousuarios        usuarios        @relation("reportes_reportante_idTousuarios", fields: [reportante_id], references: [id], onUpdate: Restrict, map: "fk_reportes_reportante")
+  usuarios_reportes_revisado_porTousuarios         usuarios?       @relation("reportes_revisado_porTousuarios", fields: [revisado_por], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_reportes_revisor")
+  usuarios_reportes_usuario_reportado_idTousuarios usuarios?       @relation("reportes_usuario_reportado_idTousuarios", fields: [usuario_reportado_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_reportes_usuario")
+
+  @@index([mensaje_reportado_id], map: "fk_reportes_mensaje")
+  @@index([reportante_id], map: "fk_reportes_reportante")
+  @@index([revisado_por], map: "fk_reportes_revisor")
+  @@index([usuario_reportado_id], map: "fk_reportes_usuario")
+}
+
+model sesiones {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  usuario_id BigInt    @db.UnsignedBigInt
+  token_hash String    @unique(map: "token_hash") @db.VarChar(255)
+  expira_en  DateTime  @db.DateTime(0)
+  revocada   Boolean   @default(false)
+  creado_en  DateTime? @default(now()) @db.Timestamp(0)
+  usuarios   usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "sesiones_ibfk_1")
+
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model solicitudes_comunidad {
+  id            BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  comunidad_id  BigInt                       @db.UnsignedBigInt
+  usuario_id    BigInt                       @db.UnsignedBigInt
+  estado        solicitudes_comunidad_estado @default(pendiente)
+  creado_en     DateTime?                    @default(now()) @db.Timestamp(0)
+  respondido_en DateTime?                    @db.DateTime(0)
+  comunidades   comunidades                  @relation(fields: [comunidad_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "solicitudes_comunidad_ibfk_1")
+  usuarios      usuarios                     @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "solicitudes_comunidad_ibfk_2")
+
+  @@unique([comunidad_id, usuario_id], map: "comunidad_id")
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model solicitudes_contacto {
+  id                                                      BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  remitente_id                                            BigInt                      @db.UnsignedBigInt
+  destinatario_id                                         BigInt                      @db.UnsignedBigInt
+  estado                                                  solicitudes_contacto_estado @default(pendiente)
+  creado_en                                               DateTime?                   @default(now()) @db.Timestamp(0)
+  respondido_en                                           DateTime?                   @db.DateTime(0)
+  usuarios_solicitudes_contacto_remitente_idTousuarios    usuarios                    @relation("solicitudes_contacto_remitente_idTousuarios", fields: [remitente_id], references: [id], onUpdate: Restrict, map: "solicitudes_contacto_ibfk_1")
+  usuarios_solicitudes_contacto_destinatario_idTousuarios usuarios                    @relation("solicitudes_contacto_destinatario_idTousuarios", fields: [destinatario_id], references: [id], onUpdate: Restrict, map: "solicitudes_contacto_ibfk_2")
+
+  @@unique([remitente_id, destinatario_id], map: "remitente_id")
+  @@index([destinatario_id], map: "destinatario_id")
+}
+
+model usuarios {
+  id                                                                  BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  nombre_completo                                                     String                       @db.VarChar(120)
+  nombre_usuario                                                      String                       @unique(map: "nombre_usuario") @db.VarChar(40)
+  correo                                                              String                       @unique(map: "correo") @db.VarChar(150)
+  password_hash                                                       String                       @db.VarChar(255)
+  foto_perfil                                                         String?                      @db.VarChar(500)
+  biografia                                                           String?                      @db.VarChar(255)
+  estado                                                              usuarios_estado              @default(activo)
+  rol                                                                 usuarios_rol                 @default(usuario)
+  ultimo_acceso                                                       DateTime?                    @db.DateTime(0)
+  creado_en                                                           DateTime?                    @default(now()) @db.Timestamp(0)
+  actualizado_en                                                      DateTime?                    @default(now()) @db.Timestamp(0)
+  bloqueos_bloqueos_usuario_idTousuarios                              bloqueos[]                   @relation("bloqueos_usuario_idTousuarios")
+  bloqueos_bloqueos_bloqueado_idTousuarios                            bloqueos[]                   @relation("bloqueos_bloqueado_idTousuarios")
+  canales_comunidad                                                   canales_comunidad[]
+  comunidades                                                         comunidades[]
+  configuracion_usuario                                               configuracion_usuario?
+  conversaciones                                                      conversaciones[]
+  mensaje_destinatarios                                               mensaje_destinatarios[]
+  mensajes                                                            mensajes[]
+  miembros_comunidad                                                  miembros_comunidad[]
+  notificaciones                                                      notificaciones[]
+  participantes_conversacion                                          participantes_conversacion[]
+  reportes_reportes_reportante_idTousuarios                           reportes[]                   @relation("reportes_reportante_idTousuarios")
+  reportes_reportes_revisado_porTousuarios                            reportes[]                   @relation("reportes_revisado_porTousuarios")
+  reportes_reportes_usuario_reportado_idTousuarios                    reportes[]                   @relation("reportes_usuario_reportado_idTousuarios")
+  sesiones                                                            sesiones[]
+  solicitudes_comunidad                                               solicitudes_comunidad[]
+  solicitudes_contacto_solicitudes_contacto_remitente_idTousuarios    solicitudes_contacto[]       @relation("solicitudes_contacto_remitente_idTousuarios")
+  solicitudes_contacto_solicitudes_contacto_destinatario_idTousuarios solicitudes_contacto[]       @relation("solicitudes_contacto_destinatario_idTousuarios")
+}
+
+enum configuracion_usuario_privacidad_perfil {
+  publico
+  contactos
+  privado
+}
+
+enum conversaciones_tipo {
+  individual
+  grupal
+}
+
+enum permisos_canal_rol {
+  propietario
+  administrador
+  miembro
+}
+
+enum configuracion_usuario_quien_puede_contactar {
+  todos
+  contactos
+  nadie
+}
+
+enum miembros_comunidad_rol {
+  propietario
+  administrador
+  miembro
+}
+
+enum notificaciones_tipo {
+  mensaje
+  solicitud_contacto
+  solicitud_comunidad
+  nuevo_miembro
+  mencion
+  sistema
+}
+
+enum participantes_conversacion_rol {
+  propietario
+  administrador
+  miembro
+}
+
+enum solicitudes_comunidad_estado {
+  pendiente
+  aceptada
+  rechazada
+}
+
+enum solicitudes_contacto_estado {
+  pendiente
+  aceptada
+  rechazada
+}
+
+enum canales_comunidad_tipo {
+  texto
+  anuncios
+}
+
+enum reportes_motivo {
+  spam
+  acoso
+  contenido_inapropiado
+  suplantacion
+  otro
+}
+
+enum comunidades_privacidad {
+  publica
+  privada
+}
+
+enum mensajes_tipo {
+  texto
+  archivo
+  sistema
+}
+
+enum reportes_estado {
+  pendiente
+  en_revision
+  resuelto
+}
+
+enum archivos_adjuntos_estado_validacion {
+  pendiente
+  aprobado
+  rechazado
+}
+
+enum usuarios_estado {
+  activo
+  suspendido
+  bloqueado
+}
+
+enum usuarios_rol {
+  usuario
+  administrador
+}
